@@ -1,0 +1,3 @@
+[submodule "week_1/solana-starter"]
+	path = week_1/solana-starter
+	url = https://github.com/PayalVerma1/solana-starter.git
