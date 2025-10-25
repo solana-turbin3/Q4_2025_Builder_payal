@@ -1,3 +1,6 @@
 [submodule "solana-starter"]
 	path = solana-starter
 	url = https://github.com/PayalVerma1/solana-starter.git
+[submodule "escrow"]
+	path = escrow
+	url = https://github.com/PayalVerma1/anchor-escrow-starter-q4-25.git
