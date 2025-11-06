@@ -14,4 +14,5 @@ pub mod capstone {
     pub fn initialize_config(ctx: Context<InitializeConfigAccounts>, registration_fee: u16) -> Result<()> {
         ctx.accounts.initialize(registration_fee, ctx.program_id)
     }
+    
 }
