@@ -26,7 +26,7 @@ pub struct InitializeConfigAccounts<'info> {
 }
 
 impl<'info> InitializeConfigAccounts<'info> {
-    pub fn initialize(&mut self, registration_fee: u16, program_id: &Pubkey) -> Result<()> {
+    pub fn initialize(&mut self, registration_fee: u64, program_id: &Pubkey) -> Result<()> {
         let config_account = &mut self.config;
         let verifier_registry=&mut self.verifier;
 
