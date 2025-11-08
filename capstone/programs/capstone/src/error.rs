@@ -3,4 +3,8 @@ use anchor_lang::prelude::*;
 pub enum CustomError{
     #[msg("Unauthorized action")]
     Unauthorized,
+    #[msg("Project not found")]
+    ProjectNotFound,
+    #[msg("Verifier not authorized")]
+    VerifierNotWhitelisted
 }

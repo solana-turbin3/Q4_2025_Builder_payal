@@ -5,6 +5,7 @@ use crate::state::Project;
 use crate::state::Attestation;
 use crate::state::attestation;
 use crate::state::verifier;
+use crate::error::CustomError;
 #[derive(Accounts)]
 pub struct VerifyProjectAccounts<'info> {
     #[account(
@@ -44,13 +45,18 @@ impl<'info>VerifyProjectAccounts<'info>{
             registry.verifier.contains(&self.verifier.key()),
              CustomError::VerifierNotWhitelisted
         );
+        let (attestation_pda,attestation_bump)=
+        Pubkey::find_program_address(
+            &[b"Attestation",project.key().as_ref(),self.verifier.key().as_ref()],
+            &crate::ID,
+        );
 
         attestation.project= project.key();
         attestation.verifier=self.verifier.key();
         attestation.ipfs_hash=ipfs_hash;
         attestation.is_valid=is_valid;
         attestation.timestamp= Clock::get()?.unix_timestamp;
-        attestation.bump=*self.bumps.get("attestation").unwrap();
+        attestation.bump=attestation_bump;
 
         if is_valid{
             project.trust_score=project.trust_score.saturating_add(10);
