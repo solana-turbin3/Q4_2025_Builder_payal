@@ -16,7 +16,7 @@ pub struct RegisterProjectAccounts<'info> {
     seeds=[b"treasury"],
     bump,
    )]
-    pub treasury:AccountInfo<'info>,
+    pub treasury:SystemAccount<'info>,
   #[account(
     init,
     payer=owner,

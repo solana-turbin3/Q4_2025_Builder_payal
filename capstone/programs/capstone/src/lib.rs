@@ -17,4 +17,14 @@ pub mod capstone {
     pub fn register_project(ctx: Context<RegisterProjectAccounts>,name:String,description:String,ipfs_hash:String)->Result<()>{
         ctx.accounts.register_project(name,description,ipfs_hash)
     }
+    pub fn add_verifier(ctx: Context<AddVerifierAccounts>, new_verifier: Pubkey) -> Result<()> {
+        ctx.accounts.add(new_verifier)
+    }
+   pub fn verify_project(
+        ctx: Context<VerifyProjectAccounts>,
+        ipfs_hash: String,
+        is_valid: bool,
+    ) -> Result<()> {
+        ctx.accounts.verifier_project(ipfs_hash, is_valid)
+    }
 }

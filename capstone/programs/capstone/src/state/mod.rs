@@ -4,3 +4,5 @@ pub mod verifier;
 pub use verifier::*;
 pub mod project;
 pub use project::*;
+pub mod attestation;
+pub use attestation::*;
