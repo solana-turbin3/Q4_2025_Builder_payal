@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use crate::instructions::verify_project;
 use crate::state::Config;
 use crate::state::VerifierRegistry;
 
@@ -43,7 +44,7 @@ impl<'info> InitializeConfigAccounts<'info> {
 
         config_account.admin = self.admin.key();
         config_account.treasury = treasury_pda;
-        config_account.verifier_registry = Pubkey::default();
+        config_account.verifier_registry = verifier_registry.key();
         config_account.fee = registration_fee;
         config_account.project_count = 0;
         config_account.bump = config_bump;

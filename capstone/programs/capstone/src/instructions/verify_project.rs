@@ -26,7 +26,7 @@ pub struct VerifyProjectAccounts<'info> {
     #[account(
         init,
         payer=verifier,
-        seeds=[b"Attestation",project.key().as_ref(),verifier.key().as_ref()],
+        seeds=[b"attestation",project.key().as_ref(),verifier.key().as_ref()],
         space=Attestation::DISCRIMINATOR.len()+Attestation::INIT_SPACE,
         bump,
     )]
@@ -63,7 +63,7 @@ impl<'info>VerifyProjectAccounts<'info>{
 
         }
         else{
-            project.trust_score=project.trust_score.saturating_add(5);
+            project.trust_score=project.trust_score.saturating_sub(5);
         }
         Ok(())
     }

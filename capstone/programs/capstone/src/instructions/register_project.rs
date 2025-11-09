@@ -33,9 +33,8 @@ impl <'info>RegisterProjectAccounts<'info>{
     pub fn register_project(&mut self,name:String,description:String,ipfs_hash:String)->Result<()>{
         let project_account=&mut self.project;
         let config_account=&mut self.config;
-        let (_project_pda,project_bump)=
-        Pubkey::find_program_address(&[b"register_project".as_ref()],&crate::ID);
-        
+      let project_bump = *self.bumps.get("project").unwrap();
+
         project_account.owner=self.owner.key();
         project_account.name=name;
         project_account.description=description;

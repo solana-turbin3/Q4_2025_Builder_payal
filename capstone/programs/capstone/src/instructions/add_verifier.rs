@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use crate::state::VerifierRegistry;
+use crate::error::CustomError;
 #[derive(Accounts)]
 pub struct AddVerifierAccounts<'info> {
     #[account(
@@ -18,7 +19,7 @@ impl<'info> AddVerifierAccounts<'info> {
         require_keys_eq!(
             self.verifier_registry.admin,
             self.admin.key(),
-            // CustomError::Unauthorized
+            CustomError::Unauthorized
         );
 
         self.verifier_registry.verifier.push(new_verifier);

@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-mod errors;
+mod error;
 mod instructions;
 mod state;
 
@@ -9,7 +9,7 @@ declare_id!("3sMoYsBXbfKJ1o52QJFBrX4CkMWVqEBjDTSKH4cZyo8b");
 
 
 #[program]
-pub mod anchor_amm_q4_25 {
+pub mod anchor_amm {
     use super::*;
 
     pub fn initialize(
