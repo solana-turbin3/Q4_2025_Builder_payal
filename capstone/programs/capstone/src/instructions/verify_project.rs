@@ -3,8 +3,6 @@ use crate::state::Config;
 use crate::state::VerifierRegistry;
 use crate::state::Project;
 use crate::state::Attestation;
-use crate::state::attestation;
-use crate::state::verifier;
 use crate::error::CustomError;
 #[derive(Accounts)]
 pub struct VerifyProjectAccounts<'info> {

@@ -9,7 +9,8 @@ pub struct Project{
     pub description: String,
     #[max_len(50)]
    pub ipfs_hash: String,
-  
+    #[max_len(100)]
+  pub id: String,
    pub status: Status,
    pub verifier:[Pubkey;10],
     pub project_id: u32,

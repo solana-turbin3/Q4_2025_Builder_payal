@@ -6,3 +6,7 @@ pub mod verify_project;
 pub use verify_project::*;
 pub mod add_verifier;
 pub use add_verifier::*;
+pub mod update_project;
+pub use update_project::*;
+pub use suspend::*;
+pub mod suspend;
