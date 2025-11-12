@@ -1,15 +1,13 @@
 use anchor_lang::prelude::*;
-use crate::state::Project;
+use crate::state::{Project, Status};
 use crate::error::CustomError;
 #[derive(Accounts)]
 pub struct UpdateProjectAccounts<'info> {
    #[account(
          mut,
-         seeds = [b"project", 
-         project.owner.as_ref(),
-          &project.project_id.to_le_bytes()
-],
-         bump = project.bump
+         has_one=owner,
+         seeds = [b"project", project.owner.as_ref(), project.id.as_bytes()],
+        bump = project.bump,
    )]
     pub project: Account<'info, Project>,
     #[account(mut)]
@@ -28,7 +26,9 @@ impl<'info>UpdateProjectAccounts<'info>{
         project_account.name=name;
         project_account.description=description;
         project_account.ipfs_hash=ipfs_hash;
-
+        project_account.status=Status::UnderReview;
+       project_account.version = project_account.version.saturating_add(1);
+         msg!("Project {} updated. New version: {}", project_account.id, project_account.version);
         Ok(())
     }
 }

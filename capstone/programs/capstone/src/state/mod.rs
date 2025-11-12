@@ -6,3 +6,5 @@ pub mod project;
 pub use project::*;
 pub mod attestation;
 pub use attestation::*;
+pub mod treasury;
+pub use treasury::*;

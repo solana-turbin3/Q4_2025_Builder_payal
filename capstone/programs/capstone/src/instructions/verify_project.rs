@@ -45,7 +45,7 @@ impl<'info>VerifyProjectAccounts<'info>{
         );
         let (attestation_pda,attestation_bump)=
         Pubkey::find_program_address(
-            &[b"Attestation",project.key().as_ref(),self.verifier.key().as_ref()],
+            &[b"attestation",project.key().as_ref(),self.verifier.key().as_ref()],
             &crate::ID,
         );
 
@@ -57,12 +57,17 @@ impl<'info>VerifyProjectAccounts<'info>{
         attestation.bump=attestation_bump;
 
         if is_valid{
-            project.trust_score=project.trust_score.saturating_add(10);
+            project.trust_score=project.trust_score.saturating_add(10); 
+            if project.trust_score >= 50 {
+            project.status = crate::state::Status::Verified;
+        }
 
         }
         else{
             project.trust_score=project.trust_score.saturating_sub(5);
+            project.status=crate::state::Status::Spam;
         }
+        
         Ok(())
     }
 }

@@ -1,51 +1,161 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { Capstone } from "../target/types/capstone";
-import { expect } from "chai";
+import {
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  LAMPORTS_PER_SOL,
+} from "@solana/web3.js";
+import { assert } from "chai";
 
 describe("capstone", () => {
   // Configure the client to use the local cluster.
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
   const program = anchor.workspace.capstone as Program<Capstone>;
-let configPda: anchor.web3.PublicKey;
-let verifierRegistryPda:  anchor.web3.PublicKey;
-let treasuryPda: anchor.web3.PublicKey;
+  const wallet = provider.wallet as anchor.Wallet;
+  let configPda: PublicKey;
+  let treasuryPda: PublicKey;
+  let verifierRegistryPda: PublicKey;
+  let ipfs_hash: string;
+  let is_valid: boolean;
 
-  it("Initializes the Config and VerifierRegistry PDAs", async () => {
-    // Add your test here.
-    configPda = anchor.web3.PublicKey.findProgramAddressSync(
+  let configBump: number;
+  let treasuryBump: number;
+  let verifierBump: number;
+
+  // project + owner
+  let projectOwner: Keypair;
+  let projectPda: PublicKey;
+  let projectBump: number;
+  const registrationFee = new anchor.BN(0.5 * LAMPORTS_PER_SOL);
+  before(async () => {
+    projectOwner = Keypair.generate();
+    const airdrop1 = await provider.connection.requestAirdrop(
+      projectOwner.publicKey,
+      2 * LAMPORTS_PER_SOL
+    );
+    await provider.connection.confirmTransaction(airdrop1);
+    [configPda, configBump] = await PublicKey.findProgramAddressSync(
       [Buffer.from("config")],
       program.programId
-    )[0];
-    verifierRegistryPda = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from("verifier")],
-      program.programId
-    )[0];
-    treasuryPda = anchor.web3.PublicKey.findProgramAddressSync(
+    );
+    [treasuryPda, treasuryBump] = await PublicKey.findProgramAddressSync(
       [Buffer.from("treasury")],
       program.programId
-    )[0];
-    const tx = await program.methods.initializeConfig(new anchor.BN(10000000)).accounts({
-      config:configPda,
-      verifierRegistry:verifierRegistryPda,
-      admin:program.provider.publicKey,
-      systemProgram:anchor.web3.SystemProgram.programId,
-    } as any).rpc();
-    console.log("Your transaction signature", tx);
-    const configAccount = await program.account.config.fetch(configPda);
-    console.log("Config Account:", configAccount);
-    expect(configAccount.admin.toBase58()).to.equal(provider.wallet.publicKey.toBase58());
-    expect(configAccount.fee.toNumber()).to.equal(10000000);
-     expect(configAccount.projectCount).to.equal(0);
-     console.log("Config initialized successfully");
-    const verifierRegistryAccount = await program.account.verifierRegistry.fetch(verifierRegistryPda);
-    expect(verifierRegistryAccount.verifier.length).to.equal(0);
-    console.log("Verifier Registry Account:", verifierRegistryAccount);
+    );
+    [verifierRegistryPda, verifierBump] =
+      await PublicKey.findProgramAddressSync(
+        [Buffer.from("verifier")],
+        program.programId
+      );
+    const tx = await program.methods
+      .initializeConfig(registrationFee)
+      .accounts({
+        admin: wallet.publicKey,
+        config: configPda,
+        verifier: verifierRegistryPda,
+        treasury: treasuryPda,
+        systemProgram: SystemProgram.programId,
+      } as any)
+      .rpc();
+
+    console.log("Config initialized:", tx);
   });
 
-  it("Adds a verifier to the Verifier Registry",async()=>{
-    
-  })
-});
+  it("Registers a new project and transfers fee", async () => {
+    // Derive Project PDA
+    const projectCount = 0; // first project
+    [projectPda, projectBump] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("project"),
+        projectOwner.publicKey.toBuffer(),
+        new anchor.BN(projectCount).toArrayLike(Buffer, "le", 4),
+      ],
+      program.programId
+    );
+
+    const projectName = "Eco Water Purifier";
+    const projectDesc = "Decentralized water purifier certification system";
+    const ipfsHash = "Qm12345abcde";
+
+    const tx = await program.methods
+      .registerProject(projectName, projectDesc, ipfsHash)
+      .accounts({
+        owner: projectOwner.publicKey,
+        project: projectPda,
+        config: configPda,
+        treasury: treasuryPda,
+        systemProgram: SystemProgram.programId,
+      } as any)
+      .signers([projectOwner])
+      .rpc();
+
+    console.log(" Project registered:", tx);
+
+    // Fetch project data
+    const projectAccount = await program.account.project.fetch(projectPda);
+    const configAccount = await program.account.config.fetch(configPda);
+    const treasuryAccount = await provider.connection.getAccountInfo(
+      treasuryPda
+    );
+
+    // Assertions
+    assert.equal(
+      projectAccount.owner.toBase58(),
+      projectOwner.publicKey.toBase58()
+    );
+    assert.equal(projectAccount.name, projectName);
+    assert.equal(projectAccount.description, projectDesc);
+    // Cast status to any to safely access the boolean flag returned by the account
+    assert.ok(
+      "notVerified" in projectAccount.status,
+      "Project status should be NotVerified"
+    );
+
+    assert.ok(
+      projectAccount.trustScore === 0,
+      "Initial trust score should be 0"
+    );
+    assert.equal(
+      configAccount.projectCount,
+      1,
+      "Project count should increment"
+    );
+
+    // Check Treasury received fee
+    const treasuryBalance = treasuryAccount.lamports;
+    assert.ok(
+      treasuryBalance >= registrationFee.toNumber(),
+      "Treasury PDA should receive registration fee"
+    );
+  });
+  it("Adds a verifier to the registry", async () => {
+    const admin = Keypair.generate();
+    [verifierRegistryPda, verifierBump] =
+      await PublicKey.findProgramAddressSync(
+        [Buffer.from("verifier")],
+        program.programId
+      );
+    const tx = await program.methods
+      .addVerifier(admin.publicKey)
+      .accounts({
+        admin: wallet.publicKey,
+        verifierRegistry: verifierRegistryPda,
+        newVerifier: admin.publicKey,
+      } as any)
+      .rpc();
+    console.log("Verifier added:", tx);
+
+    const verifierAccount = await program.account.verifierRegistry.fetch(
+      verifierRegistryPda
+    );
+    const isVerifier = verifierAccount.verifier.find(
+      (v: PublicKey) => v.toBase58() === admin.publicKey.toBase58()
+    );
+    assert.ok(isVerifier, "Verifier should be in the registry");
+  });
+  
+   });
 

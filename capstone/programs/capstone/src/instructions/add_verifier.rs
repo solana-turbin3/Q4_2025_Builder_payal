@@ -24,6 +24,7 @@ impl<'info> AddVerifierAccounts<'info> {
 
         self.verifier_registry.verifier.push(new_verifier);
         msg!("Verifier added: {}", new_verifier);
+        
         Ok(())
     }
 }
