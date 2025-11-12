@@ -28,4 +28,12 @@ pub mod capstone {
     ) -> Result<()> {
         ctx.accounts.verifier_project(ipfs_hash, is_valid)
     }
+    pub fn update_project(
+        ctx: Context<UpdateProjectAccounts>,
+        name: String,
+        description: String,
+        ipfs_hash: String,
+    ) -> Result<()> {
+        ctx.accounts.update_project(name, description, ipfs_hash)
+    }
 }

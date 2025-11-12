@@ -58,7 +58,7 @@ impl<'info>VerifyProjectAccounts<'info>{
 
         if is_valid{
             project.trust_score=project.trust_score.saturating_add(10); 
-            if project.trust_score >= 50 {
+            if project.trust_score >= 10 {
             project.status = crate::state::Status::Verified;
         }
 

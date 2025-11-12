@@ -10,7 +10,6 @@ import {
 import { assert } from "chai";
 
 describe("capstone", () => {
-  // Configure the client to use the local cluster.
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
   const program = anchor.workspace.capstone as Program<Capstone>;
@@ -18,7 +17,6 @@ describe("capstone", () => {
   let configPda: PublicKey;
   let treasuryPda: PublicKey;
   let verifierRegistryPda: PublicKey;
-  let ipfs_hash: string;
   let is_valid: boolean;
 
   let configBump: number;
@@ -29,6 +27,10 @@ describe("capstone", () => {
   let projectOwner: Keypair;
   let projectPda: PublicKey;
   let projectBump: number;
+  const projectName = "Eco Water Purifier";
+  const projectDesc = "Decentralized water purifier certification system";
+  const ipfsHash = "Qm12345abcde";
+
   const registrationFee = new anchor.BN(0.5 * LAMPORTS_PER_SOL);
   before(async () => {
     projectOwner = Keypair.generate();
@@ -50,6 +52,7 @@ describe("capstone", () => {
         [Buffer.from("verifier")],
         program.programId
       );
+
     const tx = await program.methods
       .initializeConfig(registrationFee)
       .accounts({
@@ -76,10 +79,6 @@ describe("capstone", () => {
       program.programId
     );
 
-    const projectName = "Eco Water Purifier";
-    const projectDesc = "Decentralized water purifier certification system";
-    const ipfsHash = "Qm12345abcde";
-
     const tx = await program.methods
       .registerProject(projectName, projectDesc, ipfsHash)
       .accounts({
@@ -93,23 +92,18 @@ describe("capstone", () => {
       .rpc();
 
     console.log(" Project registered:", tx);
-
-    // Fetch project data
     const projectAccount = await program.account.project.fetch(projectPda);
     const configAccount = await program.account.config.fetch(configPda);
     const treasuryAccount = await provider.connection.getAccountInfo(
       treasuryPda
     );
-
-    // Assertions
     assert.equal(
       projectAccount.owner.toBase58(),
       projectOwner.publicKey.toBase58()
     );
     assert.equal(projectAccount.name, projectName);
     assert.equal(projectAccount.description, projectDesc);
-    // Cast status to any to safely access the boolean flag returned by the account
-    assert.ok(
+     assert.ok(
       "notVerified" in projectAccount.status,
       "Project status should be NotVerified"
     );
@@ -124,7 +118,6 @@ describe("capstone", () => {
       "Project count should increment"
     );
 
-    // Check Treasury received fee
     const treasuryBalance = treasuryAccount.lamports;
     assert.ok(
       treasuryBalance >= registrationFee.toNumber(),
@@ -156,6 +149,180 @@ describe("capstone", () => {
     );
     assert.ok(isVerifier, "Verifier should be in the registry");
   });
-  
-   });
 
+  it("Verifier verifies the project", async () => {
+    // Create and register a verifier for this test
+    const verifier = Keypair.generate();
+    const txAdd = await program.methods
+      .addVerifier(verifier.publicKey)
+      .accounts({
+        admin: wallet.publicKey,
+        verifierRegistry: verifierRegistryPda,
+        newVerifier: verifier.publicKey,
+      } as any)
+      .rpc();
+    console.log("Verifier added for verification:", txAdd);
+
+    const airdrop2 = await provider.connection.requestAirdrop(
+      verifier.publicKey,
+      LAMPORTS_PER_SOL
+    );
+    await provider.connection.confirmTransaction(airdrop2);
+    const [attestationPda] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("attestation"),
+        projectPda.toBuffer(),
+        verifier.publicKey.toBuffer(),
+      ],
+      program.programId
+    );
+
+    is_valid = true;
+
+    const tx = await program.methods
+      .verifyProject(ipfsHash, is_valid)
+      .accounts({
+        verifier: verifier.publicKey,
+        project: projectPda,
+        verifierRegistry: verifierRegistryPda,
+        attestation: attestationPda,
+      } as any)
+      .signers([verifier])
+      .rpc();
+    console.log("Project verified:", tx);
+
+    const projectAccount = await program.account.project.fetch(projectPda);
+    console.log("Project status object:", projectAccount.status);
+
+    assert.ok(
+      "verified" in projectAccount.status,
+      "Project status should be Verified"
+    );
+    assert.ok(
+      projectAccount.trustScore === 10,
+      "Trust score should be updated to 10"
+    );
+    assert.ok(
+      !("spam" in projectAccount.status),
+      "Project status should not be Spam"
+    );
+  });
+  it("Verifier marks the project as spam", async () => {
+    // Create and register a verifier for this test
+    const verifier = Keypair.generate();
+    const txAdd = await program.methods
+      .addVerifier(verifier.publicKey)
+      .accounts({
+        admin: wallet.publicKey,
+        verifierRegistry: verifierRegistryPda,
+        newVerifier: verifier.publicKey,
+      } as any)
+      .rpc();
+    console.log("Verifier added for spam marking:", txAdd);
+
+    const airdrop2 = await provider.connection.requestAirdrop(
+      verifier.publicKey,
+      LAMPORTS_PER_SOL
+    );
+    await provider.connection.confirmTransaction(airdrop2);
+    const [attestationPda] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("attestation"),
+        projectPda.toBuffer(),
+        verifier.publicKey.toBuffer(),
+      ],
+      program.programId
+    );
+
+    is_valid = false;
+
+    const tx = await program.methods
+      .verifyProject(ipfsHash, is_valid)
+      .accounts({
+        verifier: verifier.publicKey,
+        project: projectPda,
+        verifierRegistry: verifierRegistryPda,
+        attestation: attestationPda,
+      } as any)
+      .signers([verifier])
+      .rpc();
+    console.log("Project marked as spam:", tx);
+
+    const projectAccount = await program.account.project.fetch(projectPda);
+    console.log("Project status object after spam marking:", projectAccount.status);
+
+    assert.ok(
+      "spam" in projectAccount.status,
+      "Project status should be Spam"
+    );
+    assert.ok(
+      projectAccount.trustScore === 5,
+      "Trust score should be decreased to 5"
+    );
+  });
+it("Prevents duplicate verification by the same verifier",async()=>{
+   const verifier = Keypair.generate();
+    const txAdd = await program.methods
+      .addVerifier(verifier.publicKey)
+      .accounts({
+        admin: wallet.publicKey,
+        verifierRegistry: verifierRegistryPda,
+        newVerifier: verifier.publicKey,
+      } as any)
+      .rpc();
+    console.log("Verifier added for spam marking:", txAdd);
+
+    const airdrop2 = await provider.connection.requestAirdrop(
+      verifier.publicKey,
+      LAMPORTS_PER_SOL
+    );
+    await provider.connection.confirmTransaction(airdrop2);
+    const [attestationPda] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("attestation"),
+        projectPda.toBuffer(),
+        verifier.publicKey.toBuffer(),
+      ],
+      program.programId
+    );
+const is_valid=true
+  const tx = await program.methods
+      .verifyProject(ipfsHash, is_valid)
+      .accounts({
+        verifier: verifier.publicKey,
+        project: projectPda,
+        verifierRegistry: verifierRegistryPda,
+        attestation: attestationPda,
+      } as any)
+      .signers([verifier])
+      .rpc();
+    console.log("Project verified:", tx);
+    try {
+      const txx=await program.methods
+      .verifyProject(ipfsHash, is_valid)
+      .accounts({
+        verifier: verifier.publicKey,
+        project: projectPda,
+        verifierRegistry: verifierRegistryPda,
+        attestation: attestationPda,
+      } as any)
+      .signers([verifier])
+      .rpc();
+    console.log("Duplicate verification:", txx);
+    assert.fail("Prevent duplicate by the same verifier")
+      
+    } catch (error) {
+      console.log("Error",error);
+    }
+})
+it("Update project",async()=>{
+ const tx= await (program as any).methods.updateProject(projectName, "this is the updated description", ipfsHash).accounts({
+  owner:projectOwner.publicKey,
+  project:projectPda,
+ }as any).signers([projectOwner]).rpc();
+ console.log("Project updated:",tx);
+ const projectAccount=await program.account.project.fetch(projectPda);
+  assert.equal(projectAccount.description,"this is the updated description","Project description should be updated");
+
+ })
+});
