@@ -40,12 +40,12 @@ impl <'info>RegisterProjectAccounts<'info>{
         let config_account=&mut self.config;
         let treasury=&mut self.treasury;
       let (_pda, project_bump) = Pubkey::find_program_address(
-          &[b"project", self.owner.key.as_ref()],
+          &[b"project", self.owner.key.as_ref(), &config_account.project_count.to_le_bytes(),],
           &crate::ID,
       );
 
         project_account.owner=self.owner.key();
-        project_account.id=format!("{}-{}",self.owner.key(),config_account.project_count);
+       project_account.project_id = config_account.project_count;
         project_account.name=name;
         project_account.description=description;
         project_account.ipfs_hash=ipfs_hash;

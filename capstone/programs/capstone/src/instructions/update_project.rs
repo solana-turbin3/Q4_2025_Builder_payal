@@ -3,13 +3,14 @@ use crate::state::{Project, Status};
 use crate::error::CustomError;
 #[derive(Accounts)]
 pub struct UpdateProjectAccounts<'info> {
-   #[account(
-         mut,
-         has_one=owner,
-         seeds = [b"project", project.owner.as_ref(), project.id.as_bytes()],
-        bump = project.bump,
-   )]
-    pub project: Account<'info, Project>,
+  #[account(
+    mut,
+    has_one = owner,
+    seeds = [b"project", project.owner.as_ref(), &project.project_id.to_le_bytes()],
+    bump = project.bump,
+)]
+pub project: Account<'info, Project>,
+
     #[account(mut)]
     pub owner: Signer<'info>,
 }

@@ -35,14 +35,15 @@ pub struct VerifyProjectAccounts<'info> {
 }
 impl<'info>VerifyProjectAccounts<'info>{
     pub fn verifier_project(&mut self,ipfs_hash:String,is_valid:bool)-> Result<()>  {
-        let registry= &self.verifier_registry;
+        let registry = &mut self.verifier_registry;
         let project=&mut self.project;
         let attestation=&mut self.attestation;
 
-        require!(
-            registry.verifier.contains(&self.verifier.key()),
-             CustomError::VerifierNotWhitelisted
-        );
+        let pos = registry
+            .verifier
+            .iter()
+            .position(|v| v == &self.verifier.key())
+            .ok_or(CustomError::VerifierNotWhitelisted)?;
         let (attestation_pda,attestation_bump)=
         Pubkey::find_program_address(
             &[b"attestation",project.key().as_ref(),self.verifier.key().as_ref()],
@@ -67,7 +68,17 @@ impl<'info>VerifyProjectAccounts<'info>{
             project.trust_score=project.trust_score.saturating_sub(5);
             project.status=crate::state::Status::Spam;
         }
-        
+        if registry.attestation_counts.len() <= pos {
+            // Defensive: expand vector if necessary (shouldn't happen if add_verifier pushes both)
+            let verifier_len = registry.verifier.len();
+            registry.attestation_counts.resize(verifier_len, 0u64);
+        }
+
+        registry.attestation_counts[pos] = registry.attestation_counts[pos].saturating_add(1);
+        registry.total_attestations = registry.total_attestations.saturating_add(1);
+
         Ok(())
+        
+        
     }
 }

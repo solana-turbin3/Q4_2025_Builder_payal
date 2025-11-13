@@ -23,6 +23,7 @@ impl<'info> AddVerifierAccounts<'info> {
         );
 
         self.verifier_registry.verifier.push(new_verifier);
+         self.verifier_registry.attestation_counts.push(0u64);
         msg!("Verifier added: {}", new_verifier);
         
         Ok(())

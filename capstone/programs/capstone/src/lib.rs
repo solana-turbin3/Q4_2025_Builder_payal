@@ -36,4 +36,9 @@ pub mod capstone {
     ) -> Result<()> {
         ctx.accounts.update_project(name, description, ipfs_hash)
     }
+    pub fn withdraw_admin(
+        ctx:Context<WithDrawAdmin>
+    )->Result<()>{
+        ctx.accounts.withdraw_admin()
+    }
 }

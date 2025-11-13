@@ -68,8 +68,9 @@ describe("capstone", () => {
   });
 
   it("Registers a new project and transfers fee", async () => {
-    // Derive Project PDA
-    const projectCount = 0; // first project
+    // Derive Project PDA using on-chain config.projectCount (robust vs hardcoding)
+    const configBefore = await program.account.config.fetch(configPda);
+    const projectCount = configBefore.projectCount;
     [projectPda, projectBump] = PublicKey.findProgramAddressSync(
       [
         Buffer.from("project"),
@@ -315,6 +316,7 @@ const is_valid=true
       console.log("Error",error);
     }
 })
+
 it("Update project",async()=>{
  const tx= await (program as any).methods.updateProject(projectName, "this is the updated description", ipfsHash).accounts({
   owner:projectOwner.publicKey,

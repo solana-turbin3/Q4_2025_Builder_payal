@@ -1,10 +1,15 @@
 use anchor_lang::prelude::*;
+
 #[error_code]
-pub enum CustomError{
-    #[msg("Unauthorized action")]
+pub enum CustomError {
+    #[msg("Unauthorized")]
     Unauthorized,
-    #[msg("Project not found")]
-    ProjectNotFound,
-    #[msg("Verifier not authorized")]
-    VerifierNotWhitelisted
+    #[msg("Verifier not whitelisted")]
+    VerifierNotWhitelisted,
+    #[msg("Nothing to withdraw")]
+    NothingToWithdraw,
+    #[msg("Nothing to claim")]
+    NothingToClaim,
+    #[msg("Math overflow")]
+    MathOverflow,
 }
