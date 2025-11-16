@@ -16,12 +16,14 @@ describe("capstone", () => {
   const wallet = provider.wallet as anchor.Wallet;
   let configPda: PublicKey;
   let treasuryPda: PublicKey;
+  let vaultPda: PublicKey;
   let verifierRegistryPda: PublicKey;
   let is_valid: boolean;
 
   let configBump: number;
   let treasuryBump: number;
   let verifierBump: number;
+  let vaultBump: number;
 
   // project + owner
   let projectOwner: Keypair;
@@ -47,6 +49,10 @@ describe("capstone", () => {
       [Buffer.from("treasury")],
       program.programId
     );
+    [vaultPda, vaultBump] = PublicKey.findProgramAddressSync(
+      [Buffer.from("treasury_vault")],
+      program.programId
+    );
     [verifierRegistryPda, verifierBump] =
       await PublicKey.findProgramAddressSync(
         [Buffer.from("verifier")],
@@ -60,6 +66,7 @@ describe("capstone", () => {
         config: configPda,
         verifier: verifierRegistryPda,
         treasury: treasuryPda,
+        vault: vaultPda,
         systemProgram: SystemProgram.programId,
       } as any)
       .rpc();
@@ -87,6 +94,7 @@ describe("capstone", () => {
         project: projectPda,
         config: configPda,
         treasury: treasuryPda,
+        vault: vaultPda,
         systemProgram: SystemProgram.programId,
       } as any)
       .signers([projectOwner])
@@ -104,7 +112,7 @@ describe("capstone", () => {
     );
     assert.equal(projectAccount.name, projectName);
     assert.equal(projectAccount.description, projectDesc);
-     assert.ok(
+    assert.ok(
       "notVerified" in projectAccount.status,
       "Project status should be NotVerified"
     );
@@ -119,11 +127,9 @@ describe("capstone", () => {
       "Project count should increment"
     );
 
-    const treasuryBalance = treasuryAccount.lamports;
-    assert.ok(
-      treasuryBalance >= registrationFee.toNumber(),
-      "Treasury PDA should receive registration fee"
-    );
+    const vaultAccount = await provider.connection.getAccountInfo(vaultPda);
+    const vaultBalance = vaultAccount.lamports;
+    assert.ok(vaultBalance >= registrationFee.toNumber());
   });
   it("Adds a verifier to the registry", async () => {
     const admin = Keypair.generate();
@@ -140,7 +146,7 @@ describe("capstone", () => {
         newVerifier: admin.publicKey,
       } as any)
       .rpc();
-    console.log("Verifier added:", tx);
+    console.log("Verifier added:");
 
     const verifierAccount = await program.account.verifierRegistry.fetch(
       verifierRegistryPda
@@ -250,19 +256,20 @@ describe("capstone", () => {
     console.log("Project marked as spam:", tx);
 
     const projectAccount = await program.account.project.fetch(projectPda);
-    console.log("Project status object after spam marking:", projectAccount.status);
-
-    assert.ok(
-      "spam" in projectAccount.status,
-      "Project status should be Spam"
+    console.log(
+      "Project status object after spam marking:",
+      projectAccount.status
     );
+
+    assert.ok("spam" in projectAccount.status, "Project status should be Spam");
     assert.ok(
       projectAccount.trustScore === 5,
       "Trust score should be decreased to 5"
     );
   });
-it("Prevents duplicate verification by the same verifier",async()=>{
-   const verifier = Keypair.generate();
+
+  it("Prevents duplicate verification by the same verifier", async () => {
+    const verifier = Keypair.generate();
     const txAdd = await program.methods
       .addVerifier(verifier.publicKey)
       .accounts({
@@ -271,6 +278,7 @@ it("Prevents duplicate verification by the same verifier",async()=>{
         newVerifier: verifier.publicKey,
       } as any)
       .rpc();
+      
     console.log("Verifier added for spam marking:", txAdd);
 
     const airdrop2 = await provider.connection.requestAirdrop(
@@ -286,8 +294,8 @@ it("Prevents duplicate verification by the same verifier",async()=>{
       ],
       program.programId
     );
-const is_valid=true
-  const tx = await program.methods
+    const is_valid = true;
+    const tx = await program.methods
       .verifyProject(ipfsHash, is_valid)
       .accounts({
         verifier: verifier.publicKey,
@@ -297,10 +305,102 @@ const is_valid=true
       } as any)
       .signers([verifier])
       .rpc();
-    console.log("Project verified:", tx);
+    console.log("Project verified:");
     try {
-      const txx=await program.methods
-      .verifyProject(ipfsHash, is_valid)
+      const txx = await program.methods
+        .verifyProject(ipfsHash, is_valid)
+        .accounts({
+          verifier: verifier.publicKey,
+          project: projectPda,
+          verifierRegistry: verifierRegistryPda,
+          attestation: attestationPda,
+        } as any)
+        .signers([verifier])
+        .rpc();
+      console.log("Duplicate verification:");
+      assert.fail("Prevent duplicate by the same verifier");
+    } catch (error) {
+      console.log("Error", error);
+    }
+  });
+
+  it("Update project", async () => {
+    const tx = await (program as any).methods
+      .updateProject(projectName, "this is the updated description", ipfsHash)
+      .accounts({
+        owner: projectOwner.publicKey,
+        project: projectPda,
+      } as any)
+      .signers([projectOwner])
+      .rpc();
+    console.log("Project updated:", tx);
+    const projectAccount = await program.account.project.fetch(projectPda);
+    assert.equal(
+      projectAccount.description,
+      "this is the updated description",
+      "Project description should be updated"
+    );
+  });
+  it("Withdraw admin funds", async () => {
+    const treasuryAccount = await program.account.treasury.fetch(treasuryPda);
+    const adminPaid = treasuryAccount.adminPaid;
+    const initialAdminBalance = await provider.connection.getBalance(
+      wallet.publicKey
+    );
+    const tx = await program.methods
+      .withdrawAdmin()
+      .accounts({
+        admin: wallet.publicKey,
+        treasury: treasuryPda,
+        vault: vaultPda,
+        systemProgram: SystemProgram.programId,
+      } as any)
+      .rpc();
+    console.log("Admin funds withdrawn:", tx);
+    const finalAdminBalance = await provider.connection.getBalance(
+      wallet.publicKey
+    );
+    assert.ok(
+      finalAdminBalance > initialAdminBalance,
+      "Admin balance should increase after withdrawal"
+    );
+    assert.ok(
+      finalAdminBalance >= initialAdminBalance + adminPaid.toNumber() - 10000,
+      "Admin should receive correct amount minus tx fee"
+    );
+  });
+  it("Withdraw verifier funds", async () => {
+    // 1. Create verifier
+    const verifier = Keypair.generate();
+
+    // 2. Add verifier to registry
+    await program.methods
+      .addVerifier(verifier.publicKey)
+      .accounts({
+        admin: wallet.publicKey,
+        verifierRegistry: verifierRegistryPda,
+        newVerifier: verifier.publicKey,
+      } as any)
+      .rpc();
+
+    // 3. Airdrop to verifier (needed to pay tx fee)
+    const drop = await provider.connection.requestAirdrop(
+      verifier.publicKey,
+      LAMPORTS_PER_SOL
+    );
+    await provider.connection.confirmTransaction(drop);
+
+    const [attestationPda] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("attestation"),
+        projectPda.toBuffer(),
+        verifier.publicKey.toBuffer(),
+      ],
+      program.programId
+    );
+
+    await program.methods
+      .verifyProject(ipfsHash, true) // or false
       .accounts({
         verifier: verifier.publicKey,
         project: projectPda,
@@ -309,22 +409,41 @@ const is_valid=true
       } as any)
       .signers([verifier])
       .rpc();
-    console.log("Duplicate verification:", txx);
-    assert.fail("Prevent duplicate by the same verifier")
-      
-    } catch (error) {
-      console.log("Error",error);
-    }
-})
 
-it("Update project",async()=>{
- const tx= await (program as any).methods.updateProject(projectName, "this is the updated description", ipfsHash).accounts({
-  owner:projectOwner.publicKey,
-  project:projectPda,
- }as any).signers([projectOwner]).rpc();
- console.log("Project updated:",tx);
- const projectAccount=await program.account.project.fetch(projectPda);
-  assert.equal(projectAccount.description,"this is the updated description","Project description should be updated");
+    // 4. Fetch treasury
+    const treasuryBefore = await program.account.treasury.fetch(treasuryPda);
+    const verifierPool = treasuryBefore.verifierPool;
 
- })
+    assert.ok(
+      verifierPool.gt(new anchor.BN(0)),
+      "Verifier pool should not be zero"
+    );
+
+    const initialBalance = await provider.connection.getBalance(
+      verifier.publicKey
+    );
+
+    // 5. Withdraw
+    const tx = await program.methods
+      .withdrawVerifier()
+      .accounts({
+        verifier: verifier.publicKey,
+        treasury: treasuryPda,
+        verifierRegistry: verifierRegistryPda,
+        systemProgram: SystemProgram.programId,
+      } as any)
+      .signers([verifier])
+      .rpc();
+
+    console.log("Verifier funds withdrawn:");
+
+    const finalBalance = await provider.connection.getBalance(
+      verifier.publicKey
+    );
+
+    assert.ok(
+      finalBalance > initialBalance,
+      "Verifier should receive lamports"
+    );
+  });
 });

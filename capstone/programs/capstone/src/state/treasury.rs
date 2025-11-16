@@ -7,4 +7,5 @@ pub struct Treasury {
     pub verifier_pool: u64,
     pub admin_paid: u64,
     pub bump: u8,
+     pub vault_bump: u8,
 }

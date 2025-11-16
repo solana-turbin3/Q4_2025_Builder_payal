@@ -4,6 +4,7 @@ use anchor_lang::prelude::*;
 pub struct Config {
     pub admin: Pubkey,
     pub treasury: Pubkey,
+    pub treasury_vault: Pubkey,
     pub verifier_registry: Pubkey,
     pub fee: u64,
     pub project_count: u32,

@@ -1,12 +1,10 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
-use anchor_lang::solana_program::config;
 use crate::state::Project;
 use crate::state::Status;
 use crate::state::Config;
-use crate::state::treasury;
-use crate::state::verifier;
 use crate::state::Treasury;
+
 #[derive(Accounts)]
 pub struct RegisterProjectAccounts<'info> {
    #[account(
@@ -21,6 +19,13 @@ pub struct RegisterProjectAccounts<'info> {
     bump,
    )]
     pub treasury:Account<'info,Treasury>,
+
+     #[account(
+        mut,
+        seeds=[b"treasury_vault"],
+        bump=treasury.vault_bump,
+    )]
+   pub vault: SystemAccount<'info>,     //SystemAccount don't need to be initialized
   #[account(
     init,
     payer=owner,
@@ -63,7 +68,7 @@ impl <'info>RegisterProjectAccounts<'info>{
                 self.system_program.to_account_info(),
                 system_program::Transfer {
                     from: self.owner.to_account_info(),
-                    to: treasury.to_account_info(),
+                    to: self.vault.to_account_info(),
                 },
             );
             system_program::transfer(cpi_ctx, fee)?;

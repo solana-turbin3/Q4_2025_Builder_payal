@@ -1,8 +1,10 @@
+use anchor_lang::prelude::*;
 use crate::instructions::verify_project;
 use crate::state::Config;
 use crate::state::Treasury;
 use crate::state::VerifierRegistry;
-use anchor_lang::prelude::*;
+
+
 #[derive(Accounts)]
 pub struct InitializeConfigAccounts<'info> {
     #[account(
@@ -28,7 +30,17 @@ pub struct InitializeConfigAccounts<'info> {
     seeds = [b"treasury"],
     bump,
 )]
+
     pub treasury: Account<'info, Treasury>,
+      #[account(
+        mut,
+       
+        seeds = [b"treasury_vault"],
+        bump,
+             
+    )]
+   pub vault: SystemAccount<'info>,
+
 
     #[account(mut)]
     pub admin: Signer<'info>,
@@ -40,6 +52,7 @@ impl<'info> InitializeConfigAccounts<'info> {
         let config_account = &mut self.config;
         let verifier_registry = &mut self.verifier;
         let treasury_account = &mut self.treasury;
+    
 
         let (treasury_pda, treasury_bump) =
             Pubkey::find_program_address(&[b"treasury".as_ref()], program_id);
@@ -47,6 +60,9 @@ impl<'info> InitializeConfigAccounts<'info> {
             Pubkey::find_program_address(&[b"config".as_ref()], program_id);
         let (_verifier_pda, verifier_bump) =
             Pubkey::find_program_address(&[b"verifier".as_ref()], program_id);
+        let (vault_pda, vault_bump) =
+            Pubkey::find_program_address(&[b"treasury_vault".as_ref()], program_id);
+
 
         verifier_registry.admin = self.admin.key();
         verifier_registry.verifier = vec![];
@@ -57,8 +73,12 @@ impl<'info> InitializeConfigAccounts<'info> {
         treasury_account.verifier_pool = 0;
         treasury_account.bump = treasury_bump;
 
+        treasury_account.vault_bump = vault_bump;
+
         config_account.admin = self.admin.key();
         config_account.treasury = treasury_pda;
+        config_account.treasury_vault = vault_pda;
+
         config_account.verifier_registry = verifier_registry.key();
         config_account.fee = registration_fee;
         config_account.project_count = 0;
