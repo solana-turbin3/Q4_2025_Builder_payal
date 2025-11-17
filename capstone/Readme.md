@@ -47,7 +47,7 @@ Deployment Transaction Signature: 24u1qroFoTXJHSDkvrGbGjYXoo1BwMuwyjbUGSaSpecC79
 
 # Architecture Diagram (Conceptually)
 
-
+  ```text
           +---------------------+                         
           |     Project Owner   |                         
           |  (register project) |                         
@@ -103,6 +103,8 @@ Deployment Transaction Signature: 24u1qroFoTXJHSDkvrGbGjYXoo1BwMuwyjbUGSaSpecC79
 |    Admin Wallet     |            |   Verifier Wallet    |
 | (withdraw admin fee)|            | (withdraw rewards)   |
 +---------------------+            +----------------------+
+```
+
 
 # Key features
 
