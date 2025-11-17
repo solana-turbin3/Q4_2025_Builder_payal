@@ -295,7 +295,22 @@ describe("capstone", () => {
       program.programId
     );
     const is_valid = true;
-    const tx = await program.methods
+    await program.methods
+    .verifyProject(ipfsHash, is_valid)
+    .accounts({
+      verifier: verifier.publicKey,
+      project: projectPda,
+      verifierRegistry: verifierRegistryPda,
+      attestation: attestationPda,
+    } as any)
+    .signers([verifier])
+    .rpc();
+
+  console.log("✔ First verification succeeded");
+
+  // Second verification [Fails]
+  try {
+    await program.methods
       .verifyProject(ipfsHash, is_valid)
       .accounts({
         verifier: verifier.publicKey,
@@ -305,23 +320,11 @@ describe("capstone", () => {
       } as any)
       .signers([verifier])
       .rpc();
-    console.log("Project verified:");
-    try {
-      const txx = await program.methods
-        .verifyProject(ipfsHash, is_valid)
-        .accounts({
-          verifier: verifier.publicKey,
-          project: projectPda,
-          verifierRegistry: verifierRegistryPda,
-          attestation: attestationPda,
-        } as any)
-        .signers([verifier])
-        .rpc();
-      console.log("Duplicate verification:");
-      assert.fail("Prevent duplicate by the same verifier");
-    } catch (error) {
-      console.log("Error", error);
-    }
+
+    assert.fail("❌ Duplicate verification was allowed");
+  } catch (err: any) {
+    console.log("✔ Duplicate verification prevented");
+  }
   });
 
   it("Update project", async () => {
@@ -370,10 +373,7 @@ describe("capstone", () => {
     );
   });
   it("Withdraw verifier funds", async () => {
-    // 1. Create verifier
     const verifier = Keypair.generate();
-
-    // 2. Add verifier to registry
     await program.methods
       .addVerifier(verifier.publicKey)
       .accounts({
@@ -383,7 +383,6 @@ describe("capstone", () => {
       } as any)
       .rpc();
 
-    // 3. Airdrop to verifier (needed to pay tx fee)
     const drop = await provider.connection.requestAirdrop(
       verifier.publicKey,
       LAMPORTS_PER_SOL
@@ -400,7 +399,7 @@ describe("capstone", () => {
     );
 
     await program.methods
-      .verifyProject(ipfsHash, true) // or false
+      .verifyProject(ipfsHash, true) 
       .accounts({
         verifier: verifier.publicKey,
         project: projectPda,
@@ -409,8 +408,6 @@ describe("capstone", () => {
       } as any)
       .signers([verifier])
       .rpc();
-
-    // 4. Fetch treasury
     const treasuryBefore = await program.account.treasury.fetch(treasuryPda);
     const verifierPool = treasuryBefore.verifierPool;
 
@@ -423,7 +420,6 @@ describe("capstone", () => {
       verifier.publicKey
     );
 
-    // 5. Withdraw
     const tx = await program.methods
       .withdrawVerifier()
       .accounts({

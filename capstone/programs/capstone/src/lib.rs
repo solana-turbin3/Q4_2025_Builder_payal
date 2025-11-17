@@ -6,7 +6,7 @@ pub mod state;
 use instructions::*;
 use state::*;
 
-declare_id!("6ZXSALtx8xiQdEjSjGJucUBrds7Kkbz2ARGwUW1Rywxa");
+declare_id!("DBvcTivLchwDP1yA1AM1FKPv68F5oipVGyYiddQTYYVW");
 
 #[program]
 pub mod capstone {
