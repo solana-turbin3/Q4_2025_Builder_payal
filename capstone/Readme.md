@@ -6,11 +6,14 @@ It enables project registration, verifier whitelisting, trust scoring, attestati
 This protocol ensures transparency, decentralization, and immutability in project validation.
 
 # All test have been passed succesfully 
+
 ![alt text](test.png)
 
-Deployed on devnet
+# Deployed on devnet
+
 Program Id :  DBvcTivLchwDP1yA1AM1FKPv68F5oipVGyYiddQTYYVW
 Deployment Transaction Signature: 24u1qroFoTXJHSDkvrGbGjYXoo1BwMuwyjbUGSaSpecC79j6py3DoB2yZZjN5hBhFHeyiRVyPzw5ygcHz9v1zsLq
+
 ![alt text](deployment.png)
 
 # Protocol Requirements
@@ -47,63 +50,7 @@ Deployment Transaction Signature: 24u1qroFoTXJHSDkvrGbGjYXoo1BwMuwyjbUGSaSpecC79
 
 # Architecture Diagram (Conceptually)
 
-  ```text
-          +---------------------+                         
-          |     Project Owner   |                         
-          |  (register project) |                         
-          +----------+----------+                         
-                     |                                      
-                     v                                      
-    +-----------------------------------+             
-    |            Project PDA            |             
-    | (Name, Desc, Status, TrustScore)  |             
-    | (Owner, project_id, bumps)        |             
-    +----------------+------------------+             
-                     |                                
-                     v                                
-       +--------------------------+                
-       |    Verifier Registry PDA |                
-       | (Whitelisted verifiers,  |                
-       |  attestation counts)     |                
-       +-------------+------------+                
-                     |                                
-       +-------------+-------------+                
-       |                           |                
-       v                           v                
-+--------------+        +------------------------+  
-|  Verifier A  |        |     Verifier B         |  
-| (attest)     |        |     (attest)           |  
-+-------+------+        +-----------+------------+  
-        |                           |               
-        v                           v               
-+-----------------------------------------------+   
-|              Attestation PDA(s)              |   
-|  (proof a verifier voted on a project)       |   
-|  (prevents duplicate verification)           |   
-+----------------------+------------------------+   
-                       |                            
-                       v                            
-            +--------------------------+             
-            |       Treasury PDA       |             
-            | (total_collected,        |             
-            |  verifier_pool, admin)   |             
-            +-------------+------------+             
-                          |                            
-                          v                            
-            +--------------------------+             
-            |      Vault PDA           |             
-            |  (Holds lamports safely) |             
-            |  (Signer for payouts)    |             
-            +-------------+------------+             
-                          |                            
-         +----------------+------------------+        
-         |                                   |        
-         v                                   v        
-+---------------------+            +----------------------+
-|    Admin Wallet     |            |   Verifier Wallet    |
-| (withdraw admin fee)|            | (withdraw rewards)   |
-+---------------------+            +----------------------+
-```
+![alt text](arch.png)
 
 
 # Key features
